@@ -1,4 +1,7 @@
 'use strict'
+
+const {Op} = require('sequelize')
+
 module.exports = (sequelize, DataTypes) => {
     const Lane = sequelize.define(
         'lane',
@@ -21,6 +24,26 @@ module.exports = (sequelize, DataTypes) => {
             underscored: true,
         }
     )
+    Lane.updateSequence = function (model, startSequence) {
+        const getHigherSequenced = model.findAll({
+            where: {
+                sequence: {[Op.gt]: startSequence},
+            },
+            order: [['sequence', 'ASC']],
+        })
+
+        return getHigherSequenced.then((instances) => {
+            return new Promise((resolve, reject) => {
+                for (let i = startSequence; i < instances.length; i++) {
+                    instances[i].update({
+                        sequence: i,
+                    })
+                }
+                resolve()
+            })
+        })
+    }
+
     return Lane
 }
 
