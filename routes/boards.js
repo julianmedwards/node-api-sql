@@ -1,87 +1,69 @@
-const Board = require('../models/board')
+'use strict'
 
-function addBoard(req, res, next) {
-    if (!req.is('application/json')) {
-        return next(
-            new errors.InvalidContentError("Expects 'application/json'")
-        )
-    }
+const errors = require('restify-errors')
 
-    let data = req.body
-
-    let board = new Board(data)
-    board.save(function (err) {
-        if (err) {
-            console.error(err)
-            return next(new errors.InternalError(err.message))
+module.exports = (server, db) => {
+    // Create a new board
+    server.post('/boards', (req, res, next) => {
+        if (!req.is('application/json')) {
+            return next(
+                new errors.InvalidContentError("Expects 'application/json'")
+            )
         }
 
-        res.setHeader('Access-Control-Allow-Origin', '*')
-        res.send(201, {boardId: board._id})
-        next()
-    })
-}
+        let data = req.body
 
-function getBoards(req, res, next) {
-    Board.apiQuery(req.params, function (err, docs) {
-        if (err) {
-            console.error(err)
-            return next(new errors.InvalidContentError(err.errors.name.message))
-        }
-
-        res.send(docs)
-        next()
-    })
-}
-
-function getBoard(req, res, next) {
-    Board.findById(req.params.id, (err, board) => {
-        if (err) {
-            console.error(err)
-            return next(new errors.InternalError(err.message))
-        } else {
-            if (!board) {
-                res.send(404)
-                return next()
-            }
-            Board.sequenceLanes(board)
-            res.send(board)
+        db.boards.create(data).then((board) => {
+            res.send({boardId: board.id})
             next()
-        }
+        })
     })
-}
 
-function updateBoard(req, res, next) {
-    if (!req.is('application/json')) {
-        return next(
-            new errors.InvalidContentError("Expects 'application/json'")
-        )
-    }
+    // Get all boards
+    server.get('/boards', (req, res, next) => {
+        db.boards
+            .findAll({
+                include: [{model: db.lanes, include: db.cards}],
+            })
+            .then((boards) => {
+                res.send(boards)
+                next()
+            })
+    })
 
-    let data = req.body
+    // Get one board by id
+    server.get('/boards/:id', (req, res, next) => {
+        db.boards
+            .findAll({
+                where: {id: req.params.id},
+                include: [{model: db.lanes, include: db.cards}],
+            })
+            .then((boards) => {
+                res.send(boards)
+                next()
+            })
+    })
 
-    Board.findById(req.params.id, (err, board) => {
-        if (err) {
-            console.error(err)
-            return next(new errors.InternalError(err.message))
-        } else {
-            board.boardName = data.boardName
-            board.save(function (err) {
-                if (err) {
-                    console.error(err)
-                    return next(new errors.InternalError(err.message))
+    // Update board attributes (name)
+    server.patch('/boards/:id', (req, res, next) => {
+        if (!req.is('application/json')) {
+            return next(
+                new errors.InvalidContentError("Expects 'application/json'")
+            )
+        }
+
+        let data = req.body
+
+        db.boards
+            .update(
+                {boardName: data.boardName},
+                {
+                    where: {id: req.params.id},
                 }
-
+            )
+            .then(() => {
                 res.send(204)
                 next()
             })
-        }
     })
-}
-
-module.exports = (server) => {
-    server.post('/boards', addBoard)
-    server.get('/boards', getBoards)
-    server.get('/boards/:id', getBoard)
-    server.patch('/boards/:id', updateBoard)
 }
