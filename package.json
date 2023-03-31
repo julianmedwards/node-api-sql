@@ -1,0 +1,30 @@
+{
+    "name": "trello-api-sql",
+    "version": "1.0.0",
+    "description": "",
+    "main": "api.js",
+    "scripts": {
+        "startapi": "nodemon api.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/julianmedwards/trello-api-sql.git"
+    },
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/julianmedwards/trello-api-sql/issues"
+    },
+    "homepage": "https://github.com/julianmedwards/trello-api-sql#readme",
+    "dependencies": {
+        "mysql2": "^3.2.0",
+        "restify": "^11.0.0",
+        "restify-errors": "^8.0.2",
+        "sequelize": "^6.30.0",
+        "sequelize-cli": "^6.6.0"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.22"
+    }
+}
