@@ -23,7 +23,15 @@ module.exports = (server, db) => {
     server.get('/boards', (req, res, next) => {
         db.boards
             .findAll({
-                include: [{model: db.lanes, include: db.cards}],
+                include: [
+                    {
+                        model: db.lanes,
+                        include: db.cards,
+                        order: [[db.cards, 'sequence', 'ASC']],
+                    },
+                ],
+                // This reorders lanes and boards?
+                order: [[db.lanes, 'sequence', 'ASC']],
             })
             .then((boards) => {
                 res.send(boards)
@@ -37,6 +45,7 @@ module.exports = (server, db) => {
             .findAll({
                 where: {id: req.params.id},
                 include: [{model: db.lanes, include: db.cards}],
+                order: [[db.lanes, 'sequence', 'ASC']],
             })
             .then((boards) => {
                 res.send(boards)
