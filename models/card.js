@@ -30,8 +30,9 @@ module.exports = (sequelize, DataTypes) => {
         }
     )
 
-    Card.updateSequence = util.updateSequence
-
+    Card.resequence = util.resequence
+    Card.getHigherSequenced = util.getHigherSequenced
+    Card.applySequence = util.applySequence
     Card.shiftSequence = util.shiftSequence
 
     return Card

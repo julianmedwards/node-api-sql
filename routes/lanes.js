@@ -93,46 +93,62 @@ module.exports = (server, db) => {
         })
     })
 
-    //
-    // TO DO AFTER CARDS
-    //
     // Delete a lane and move its cards to a new lane
     server.patch(
         '/boards/:boardId/lanes/:laneId/delete-and-transfer/:destinationLaneId',
         (req, res, next) => {
-            Board.findById(req.params.boardId, (err, board) => {
-                if (err) {
-                    console.error(err)
-                    return next(new errors.InternalError(err.message))
-                } else {
-                    const startLane = board.lanes.id(req.params.laneId)
-                    const destLane = board.lanes.id(
-                        req.params.destinationLaneId
-                    )
-                    const cards = startLane.cards
-                    const nextSequence = destLane.cards.length
+            const getNextSequence = db.cards.count({
+                where: {laneId: req.params.destinationLaneId},
+            })
 
-                    cards.forEach((card) => {
-                        destLane.cards.push(card.toObject())
+            getNextSequence.then((nextSequence) => {
+                const getTransferCards = db.cards.findAll({
+                    where: {
+                        laneId: req.params.laneId,
+                    },
+                    order: [['sequence', 'ASC']],
+                })
+
+                const updateSequence = getTransferCards.then((cards) => {
+                    if (cards.length > 0) {
+                        return db.cards.applySequence(cards, nextSequence)
+                    } else {
+                        return Promise.resolve()
+                    }
+                })
+
+                const updateCardsLane = updateSequence.then(() => {
+                    db.cards.update(
+                        {
+                            laneId: req.params.destinationLaneId,
+                        },
+                        {where: {laneId: req.params.laneId}}
+                    )
+                })
+
+                const getLaneSequence = db.lanes.findOne({
+                    where: {id: req.params.laneId},
+                })
+
+                Promise.all([updateCardsLane, getLaneSequence]).then((vals) => {
+                    const laneStartSequence = vals[1].sequence
+
+                    const resequenceLanes = db.lanes.resequence(
+                        db.lanes,
+                        'boardId',
+                        req.params.boardId,
+                        laneStartSequence
+                    )
+
+                    const destroyLane = db.lanes.destroy({
+                        where: {id: req.params.laneId},
                     })
 
-                    Lane.resequence(board.lanes, startLane.sequence)
-
-                    Card.resequence(destLane.cards, nextSequence)
-
-                    startLane.remove()
-
-                    board.save(function (err) {
-                        if (err) {
-                            console.error(err)
-                            return next(new errors.InternalError(err.message))
-                        }
-
-                        res.setHeader('Access-Control-Allow-Origin', '*')
+                    Promise.all([resequenceLanes, destroyLane]).then(() => {
                         res.send(204)
                         next()
                     })
-                }
+                })
             })
         }
     )
@@ -146,14 +162,14 @@ module.exports = (server, db) => {
         getLane.then((lane) => {
             const startSequence = lane.sequence
 
-            const updateSequence = db.lanes.updateSequence(
+            const resequence = db.lanes.getHigherSequenced(
                 db.lanes,
                 'boardId',
                 req.params.boardId,
                 startSequence
             )
 
-            updateSequence.then(() => {
+            resequence.then(() => {
                 const destroy = lane.destroy()
 
                 destroy.then(() => {

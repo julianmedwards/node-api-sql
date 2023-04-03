@@ -25,8 +25,9 @@ module.exports = (sequelize, DataTypes) => {
         }
     )
 
-    Lane.updateSequence = util.updateSequence
-
+    Lane.resequence = util.resequence
+    Lane.getHigherSequenced = util.getHigherSequenced
+    Lane.applySequence = util.applySequence
     Lane.shiftSequence = util.shiftSequence
 
     return Lane

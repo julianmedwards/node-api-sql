@@ -3,29 +3,59 @@
 const {Op} = require('sequelize')
 
 module.exports = {
-    // Updates all sequences elements after a certain point.
-    updateSequence: function (model, parentColumn, parentId, startSequence) {
+    // Updates sequence of tables starting at given value.
+    resequence: function (model, parentColumn, parentId, startSequence) {
         return new Promise(async (resolve, reject) => {
-            const higherSequenced = await model.findAll({
+            const higherInstances = await model.getHigherSequenced(
+                model,
+                parentColumn,
+                parentId,
+                startSequence
+            )
+
+            if (higherInstances.length > 0) {
+                resolve(
+                    await model.applySequence(higherInstances, startSequence)
+                )
+            } else {
+                resolve()
+            }
+        })
+    },
+
+    // Returns ordered array of model instances which have a greater sequence.
+    getHigherSequenced: function (
+        model,
+        parentColumn,
+        parentId,
+        startSequence
+    ) {
+        return new Promise(async (resolve, reject) => {
+            const instances = await model.findAll({
                 where: {
                     [parentColumn]: parentId,
                     sequence: {[Op.gt]: startSequence},
                 },
                 order: [['sequence', 'ASC']],
             })
+            resolve(instances)
+        })
+    },
 
-            if (higherSequenced.length > 0) {
-                const sequenced = higherSequenced.map(async (instance, i) => {
-                    const updatedInst = await instance.update({
-                        sequence: startSequence + i,
-                    })
-                    return updatedInst
+    // Updates sequence of given array of model instances incrementally
+    // starting from given value.
+    applySequence: function (instances, startSequence) {
+        return new Promise(async (resolve, reject) => {
+            const sequenced = instances.map(async (instance, i) => {
+                const updatedInst = await instance.update({
+                    sequence: startSequence + i,
                 })
+                return updatedInst
+            })
 
-                Promise.all(sequenced).then(() => {
-                    resolve()
-                })
-            } else resolve()
+            Promise.all(sequenced).then(() => {
+                resolve()
+            })
         })
     },
 

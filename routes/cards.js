@@ -38,7 +38,7 @@ module.exports = (server, db) => {
     server.get('/boards/:boardId/lanes/:laneId/cards', (req, res, next) => {
         const getCards = db.cards.findAll({
             where: {laneId: req.params.laneId},
-            order: [['sequence', ASC]],
+            order: [['sequence', 'ASC']],
         })
 
         getCards.then((cards) => {
@@ -111,7 +111,7 @@ module.exports = (server, db) => {
             getCard.then((card) => {
                 const startSequence = card.sequence
 
-                const updateSequence = db.cards.updateSequence(
+                const resequence = db.cards.resequence(
                     db.cards,
                     'laneId',
                     req.params.laneId,
@@ -122,7 +122,7 @@ module.exports = (server, db) => {
                     where: {laneId: req.params.destinationLaneId},
                 })
 
-                Promise.all([updateSequence, getNewSequence]).then((vals) => {
+                Promise.all([resequence, getNewSequence]).then((vals) => {
                     const updateAssoc = card.update({
                         laneId: req.params.destinationLaneId,
                         sequence: vals[1],
@@ -148,14 +148,14 @@ module.exports = (server, db) => {
             getCard.then((card) => {
                 const startSequence = card.sequence
 
-                const updateSequence = db.cards.updateSequence(
+                const resequence = db.cards.resequence(
                     db.cards,
                     'laneId',
                     req.params.laneId,
                     startSequence
                 )
 
-                updateSequence.then(() => {
+                resequence.then(() => {
                     const destroy = card.destroy()
 
                     destroy.then(() => {
