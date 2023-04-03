@@ -2,8 +2,6 @@
 
 const errors = require('restify-errors')
 
-const util = require('../util')
-
 module.exports = (server, db) => {
     // Create a new lane
     server.post('/boards/:boardId/lanes', (req, res, next) => {
@@ -56,39 +54,46 @@ module.exports = (server, db) => {
             )
         }
 
-        let data = req.body
+        const data = req.body
+        const laneId = req.params.laneId
+        let updates = {}
 
-        db.lanes.update({})
+        if (data.laneName) {
+            updates.laneName = data.laneName
+        }
 
-        Board.findById(req.params.boardId, (err, board) => {
-            if (err) {
-                console.error(err)
-                return next(new errors.InternalError(err.message))
-            } else {
-                const updatedLane = board.lanes.id(req.params.laneId)
+        const updateLane = db.lanes.update(updates, {
+            where: {
+                id: laneId,
+            },
+        })
 
-                if (data.laneName) {
-                    updatedLane.laneName = data.laneName
-                }
-
+        updateLane.then(() => {
+            const sequenceUpdate = new Promise((resolve, reject) => {
                 if (data.sequenceShift) {
-                    Lane.shiftSequence(board, updatedLane, data.sequenceShift)
+                    const finished = db.lanes.shiftSequence(
+                        db.lanes,
+                        laneId,
+                        data.sequenceShift
+                    )
+                    finished.then(() => {
+                        resolve()
+                    })
+                } else {
+                    resolve()
                 }
+            })
 
-                board.markModified('lanes')
-                board.save(function (err) {
-                    if (err) {
-                        console.error(err)
-                        return next(new errors.InternalError(err.message))
-                    }
-
-                    res.send(204)
-                    next()
-                })
-            }
+            sequenceUpdate.then(() => {
+                res.send(204)
+                next()
+            })
         })
     })
 
+    //
+    // TO DO AFTER CARDS
+    //
     // Delete a lane and move its cards to a new lane
     server.patch(
         '/boards/:boardId/lanes/:laneId/delete-and-transfer/:destinationLaneId',
@@ -132,8 +137,6 @@ module.exports = (server, db) => {
 
     // Delete a lane
     server.del('/boards/:boardId/lanes/:laneId', (req, res, next) => {
-        let startSequence
-
         const getLane = db.lanes.findOne({
             where: {id: req.params.laneId},
         })
