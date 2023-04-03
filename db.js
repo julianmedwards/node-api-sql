@@ -39,9 +39,13 @@ db.cards = require('./models/card.js')(sequelize, Sequelize)
 
 // Relations
 db.lanes.belongsTo(db.boards)
-db.boards.hasMany(db.lanes)
+db.boards.hasMany(db.lanes, {
+    foreignKey: 'boardId',
+})
 
 db.cards.belongsTo(db.lanes)
-db.lanes.hasMany(db.cards)
+db.lanes.hasMany(db.cards, {
+    foreignKey: 'laneId',
+})
 
 module.exports = db
