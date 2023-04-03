@@ -4,10 +4,11 @@ const {Op} = require('sequelize')
 
 module.exports = {
     // Updates all sequences elements after a certain point.
-    updateSequence: function (model, startSequence) {
+    updateSequence: function (model, parentColumn, parentId, startSequence) {
         return new Promise(async (resolve, reject) => {
             const higherSequenced = await model.findAll({
                 where: {
+                    [parentColumn]: parentId,
                     sequence: {[Op.gt]: startSequence},
                 },
                 order: [['sequence', 'ASC']],
@@ -29,14 +30,23 @@ module.exports = {
     },
 
     // Swaps sequence of two adjacent elements.
-    shiftSequence: function (model, currentId, sequenceShift) {
+    shiftSequence: function (
+        model,
+        parentColumn,
+        parentId,
+        currentId,
+        sequenceShift
+    ) {
         return new Promise(async (resolve, reject) => {
             const currentInstance = await model.findOne({
                 where: {id: currentId},
             })
 
             const nextInstance = await model.findOne({
-                where: {sequence: currentInstance.sequence + sequenceShift},
+                where: {
+                    [parentColumn]: parentId,
+                    sequence: currentInstance.sequence + sequenceShift,
+                },
             })
 
             if (sequenceShift === 1) {

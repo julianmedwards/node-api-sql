@@ -20,30 +20,30 @@ module.exports = (server, db) => {
         })
 
         getSequence.then((sequence) => {
-            db.lanes
-                .create({
-                    laneName: laneName,
-                    boardId: boardId,
-                    sequence: sequence,
-                })
-                .then((lane) => {
-                    res.send(201, {laneId: lane.id})
-                    next()
-                })
+            const createLane = db.lanes.create({
+                laneName: laneName,
+                boardId: boardId,
+                sequence: sequence,
+            })
+
+            createLane.then((lane) => {
+                res.send(201, {laneId: lane.id})
+                next()
+            })
         })
     })
 
     // Get all lanes in a board
     server.get('/boards/:boardId/lanes', (req, res, next) => {
-        db.lanes
-            .findAll({
-                where: {boardId: req.params.boardId},
-                order: [['sequence', ASC]],
-            })
-            .then((lanes) => {
-                res.send(lanes)
-                next()
-            })
+        const getLanes = db.lanes.findAll({
+            where: {boardId: req.params.boardId},
+            order: [['sequence', ASC]],
+        })
+
+        getLanes.then((lanes) => {
+            res.send(lanes)
+            next()
+        })
     })
 
     // Update lane attributes
@@ -73,6 +73,8 @@ module.exports = (server, db) => {
                 if (data.sequenceShift) {
                     const finished = db.lanes.shiftSequence(
                         db.lanes,
+                        'boardId',
+                        req.params.boardId,
                         laneId,
                         data.sequenceShift
                     )
@@ -146,11 +148,15 @@ module.exports = (server, db) => {
 
             const updateSequence = db.lanes.updateSequence(
                 db.lanes,
+                'boardId',
+                req.params.boardId,
                 startSequence
             )
 
             updateSequence.then(() => {
-                lane.destroy().then(() => {
+                const destroy = lane.destroy()
+
+                destroy.then(() => {
                     res.send(204)
                     next()
                 })

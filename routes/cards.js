@@ -1,163 +1,169 @@
-const Board = require('../models/board')
-const Lane = require('../models/lane')
-const Card = require('../models/card')
+'use strict'
 
-function addCard(req, res, next) {
-    if (!req.is('application/json')) {
-        return next(
-            new errors.InvalidContentError("Expects 'application/json'")
-        )
-    }
+const errors = require('restify-errors')
 
-    let data = req.body
+module.exports = (server, db) => {
+    // Create a new card
+    server.post('/boards/:boardId/lanes/:laneId/cards', (req, res, next) => {
+        if (!req.is('application/json')) {
+            return next(
+                new errors.InvalidContentError("Expects 'application/json'")
+            )
+        }
 
-    Board.findById(req.params.boardId, (err, board) => {
-        if (err) {
-            console.error(err)
-            return next(new errors.InternalError(err.message))
-        } else {
-            const lane = board.lanes.id(req.params.laneId)
+        const laneId = req.params.laneId
+        const attributes = {cardName: req.body.cardName, laneId: laneId}
+        if (req.body.cardDescr) {
+            attributes.cardDescr = req.body.cardDescr
+        }
 
-            data.sequence = lane.cards.length
-            let card = new Card(data)
-            lane.cards.push(card)
+        const getSequence = db.cards.count({
+            where: {
+                laneId: laneId,
+            },
+        })
 
-            board.save(function (err) {
-                if (err) {
-                    console.error(err)
-                    return next(new errors.InternalError(err.message))
-                }
+        getSequence.then((sequence) => {
+            attributes.sequence = sequence
+            const createCard = db.cards.create(attributes)
 
-                res.setHeader('Access-Control-Allow-Origin', '*')
-                res.send(201, {cardId: card._id})
+            createCard.then((card) => {
+                res.send(201, {cardId: card.id})
                 next()
             })
-        }
+        })
     })
-}
 
-function getCards(req, res, next) {
-    Board.findById(req.params.boardId, (err, board) => {
-        if (err) {
-            console.error(err)
-            return next(new errors.InternalError(err.message))
-        } else {
-            const lane = board.lanes.id(req.params.laneId)
+    // Get all cards in a lane
+    server.get('/boards/:boardId/lanes/:laneId/cards', (req, res, next) => {
+        const getCards = db.cards.findAll({
+            where: {laneId: req.params.laneId},
+            order: [['sequence', ASC]],
+        })
 
-            Lane.sequenceCards(lane)
-            res.send(lane.cards)
+        getCards.then((cards) => {
+            res.send(cards)
             next()
-        }
+        })
     })
-}
 
-function updateCard(req, res, next) {
-    if (!req.is('application/json')) {
-        return next(
-            new errors.InvalidContentError("Expects 'application/json'")
-        )
-    }
+    // Update card attributes or sequence
+    server.patch(
+        '/boards/:boardId/lanes/:laneId/cards/:cardId',
+        (req, res, next) => {
+            if (!req.is('application/json')) {
+                return next(
+                    new errors.InvalidContentError("Expects 'application/json'")
+                )
+            }
 
-    let data = req.body
-
-    Board.findById(req.params.boardId, (err, board) => {
-        if (err) {
-            console.error(err)
-            return next(new errors.InternalError(err.message))
-        } else {
-            const lane = board.lanes.id(req.params.laneId)
-            const updatedCard = lane.cards.id(req.params.cardId)
+            const data = req.body
+            const cardId = req.params.cardId
+            let updates = {}
 
             if (data.cardName) {
-                updatedCard.cardName = data.cardName
+                updates.cardName = data.cardName
             }
             if (data.cardDescr) {
-                updatedCard.cardDescr = data.cardDescr
+                updates.cardDescr = data.cardDescr
             }
 
-            if (data.sequenceShift) {
-                Card.shiftSequence(lane, updatedCard, data.sequenceShift)
-            }
+            const updateCard = db.cards.update(updates, {
+                where: {
+                    id: cardId,
+                },
+            })
 
-            board.markModified('lanes')
-            board.save(function (err) {
-                if (err) {
-                    console.error(err)
-                    return next(new errors.InternalError(err.message))
-                }
+            updateCard.then(() => {
+                const sequenceUpdate = new Promise((resolve, reject) => {
+                    if (data.sequenceShift) {
+                        const finished = db.cards.shiftSequence(
+                            db.cards,
+                            'laneId',
+                            req.params.laneId,
+                            cardId,
+                            data.sequenceShift
+                        )
+                        finished.then(() => {
+                            resolve()
+                        })
+                    } else {
+                        resolve()
+                    }
+                })
 
-                res.send(204)
-                next()
+                sequenceUpdate.then(() => {
+                    res.send(204)
+                    next()
+                })
             })
         }
-    })
-}
+    )
 
-function moveCardToLane(req, res, next) {
-    Board.findById(req.params.boardId, (err, board) => {
-        if (err) {
-            console.error(err)
-            return next(new errors.InternalError(err.message))
-        } else {
-            const startLane = board.lanes.id(req.params.laneId)
-            const destLane = board.lanes.id(req.params.destinationLaneId)
-            const card = startLane.cards.id(req.params.cardId)
-            const cardSequence = card.sequence
-
-            startLane.cards.pull(req.params.cardId)
-            destLane.cards.push(card.toObject())
-
-            // Change sequence to end of new lane
-            destLane.cards.id(req.params.cardId).sequence =
-                destLane.cards.length - 1
-
-            // Shift any cards in starting lane after moved card by 1
-            Card.resequence(startLane.cards, cardSequence)
-
-            board.save(function (err) {
-                if (err) {
-                    console.error(err)
-                    return next(new errors.InternalError(err.message))
-                }
-
-                res.setHeader('Access-Control-Allow-Origin', '*')
-                res.send(204)
-                next()
-            })
-        }
-    })
-}
-
-function deleteCard(req, res, next) {
-    Board.findById(req.params.boardId, (err, board) => {
-        if (err) {
-            console.error(err)
-            return next(new errors.InternalError(err.message))
-        } else {
-            const lane = board.lanes.id(req.params.laneId)
-            lane.cards.id(req.params.cardId).remove()
-
-            board.save(function (err) {
-                if (err) {
-                    console.error(err)
-                    return next(new errors.InternalError(err.message))
-                }
-
-                res.setHeader('Access-Control-Allow-Origin', '*')
-                res.send(204)
-                next()
-            })
-        }
-    })
-}
-
-module.exports = (server) => {
-    server.post('/boards/:boardId/lanes/:laneId/cards', addCard)
-    server.get('/boards/:boardId/lanes/:laneId/cards', getCards)
-    server.patch('/boards/:boardId/lanes/:laneId/cards/:cardId', updateCard)
+    // Move card to a new lane
     server.patch(
         '/boards/:boardId/lanes/:laneId/cards/:cardId/move-to-lane/:destinationLaneId',
-        moveCardToLane
+        (req, res, next) => {
+            const getCard = db.cards.findOne({
+                where: {id: req.params.cardId},
+            })
+
+            getCard.then((card) => {
+                const startSequence = card.sequence
+
+                const updateSequence = db.cards.updateSequence(
+                    db.cards,
+                    'laneId',
+                    req.params.laneId,
+                    startSequence
+                )
+
+                const getNewSequence = db.cards.count({
+                    where: {laneId: req.params.destinationLaneId},
+                })
+
+                Promise.all([updateSequence, getNewSequence]).then((vals) => {
+                    const updateAssoc = card.update({
+                        laneId: req.params.destinationLaneId,
+                        sequence: vals[1],
+                    })
+
+                    updateAssoc.then(() => {
+                        res.send(204)
+                        next()
+                    })
+                })
+            })
+        }
     )
-    server.del('/boards/:boardId/lanes/:laneId/cards/:cardId', deleteCard)
+
+    // Delete a card
+    server.del(
+        '/boards/:boardId/lanes/:laneId/cards/:cardId',
+        (req, res, next) => {
+            const getCard = db.cards.findOne({
+                where: {id: req.params.cardId},
+            })
+
+            getCard.then((card) => {
+                const startSequence = card.sequence
+
+                const updateSequence = db.cards.updateSequence(
+                    db.cards,
+                    'laneId',
+                    req.params.laneId,
+                    startSequence
+                )
+
+                updateSequence.then(() => {
+                    const destroy = card.destroy()
+
+                    destroy.then(() => {
+                        res.send(204)
+                        next()
+                    })
+                })
+            })
+        }
+    )
 }

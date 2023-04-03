@@ -1,5 +1,7 @@
 'use strict'
 
+const util = require('../util')
+
 module.exports = (sequelize, DataTypes) => {
     const Card = sequelize.define(
         'card',
@@ -27,33 +29,10 @@ module.exports = (sequelize, DataTypes) => {
             underscored: true,
         }
     )
+
+    Card.updateSequence = util.updateSequence
+
+    Card.shiftSequence = util.shiftSequence
+
     return Card
 }
-
-// CardSchema.statics.shiftSequence = async function (
-//     lane,
-//     movedCard,
-//     sequenceShift
-// ) {
-//     const cards = lane.cards
-//     const newSequence = movedCard.sequence + sequenceShift
-
-//     if (cards.length < 2) {
-//         throw new errors.InternalError(
-//             'Called Card.shiftSequence without multiple cards.'
-//         )
-//     }
-
-//     const otherCard = lane.cards.find((card) => {
-//         return card.sequence === newSequence
-//     })
-
-//     otherCard.sequence = movedCard.sequence
-//     movedCard.sequence = newSequence
-// }
-
-// CardSchema.statics.resequence = function (cards, startSequence) {
-//     for (let i = startSequence; i < cards.length; i++) {
-//         cards[i].sequence = i
-//     }
-// }
