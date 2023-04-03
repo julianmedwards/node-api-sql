@@ -42,13 +42,17 @@ module.exports = (server, db) => {
     // Get one board by id
     server.get('/boards/:id', (req, res, next) => {
         db.boards
-            .findAll({
+            .findOne({
                 where: {id: req.params.id},
                 include: [{model: db.lanes, include: db.cards}],
                 order: [[db.lanes, 'sequence', 'ASC']],
             })
             .then((boards) => {
-                res.send(boards)
+                if (boards) {
+                    res.send(boards)
+                } else {
+                    res.send(404)
+                }
                 next()
             })
     })
