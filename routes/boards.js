@@ -13,7 +13,9 @@ module.exports = (server, db) => {
 
         let data = req.body
 
-        const createBoard = db.boards.create(data)
+        const createBoard = db.boards.create(data, {
+            include: [{model: db.lanes, include: [db.cards]}],
+        })
 
         createBoard.then((board) => {
             res.send({boardId: board.id})
