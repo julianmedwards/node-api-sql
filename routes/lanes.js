@@ -37,7 +37,7 @@ module.exports = (server, db) => {
     server.get('/boards/:boardId/lanes', (req, res, next) => {
         const getLanes = db.lanes.findAll({
             where: {boardId: req.params.boardId},
-            order: [['sequence', ASC]],
+            order: [['sequence', 'ASC']],
         })
 
         getLanes.then((lanes) => {
