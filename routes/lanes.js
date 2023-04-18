@@ -162,7 +162,8 @@ module.exports = (server, db) => {
         getLane.then((lane) => {
             const startSequence = lane.sequence
 
-            const resequence = db.lanes.getHigherSequenced(
+            console.log('deleting')
+            const resequence = db.lanes.resequence(
                 db.lanes,
                 'boardId',
                 req.params.boardId,
