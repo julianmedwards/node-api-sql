@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  client:
+    build:
+      dockerfile: Dockerfile.dev
+      args:
+        - NODE_ENV=development
+    image: julianmedwards/trello-api-sql:dev
+    environment:
+      CHOKIDAR_USEPOLLING: 'true'
+    ports:
+      - 5000:5000
+    volumes:
+      - ./:/usr/src/api
+      - /usr/src/api/node_modules/
