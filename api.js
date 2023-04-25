@@ -30,8 +30,8 @@ server.opts('*', (req, res, next) => {
     res.send(204)
     return next()
 })
-server.use(restify.plugins.jsonBodyParser({mapParams: true}))
-server.use(restify.plugins.queryParser({mapParams: true}))
+server.use(restify.plugins.jsonBodyParser({ mapParams: true }))
+server.use(restify.plugins.queryParser({ mapParams: true }))
 
 /**
  * Sync DB, Require Routes, Start Server
@@ -40,7 +40,7 @@ const db = require('./db.js')
 require('./routes/index')(server, db)
 
 // drop and resync with { force: true },
-db.sequelize.sync({force: true}).then(() => {
+db.sequelize.sync().then(() => {
     server.listen(config.port, () => {
         console.log(`Server is listening on port ${config.port}`)
     })
