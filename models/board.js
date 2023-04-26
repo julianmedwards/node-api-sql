@@ -21,24 +21,3 @@ module.exports = (sequelize, DataTypes) => {
     )
     return Board
 }
-// BoardSchema.statics.sequenceLanes = function (board) {
-//     board.lanes.sort((a, b) => {
-//         if (a.sequence < b.sequence) {
-//             return -1
-//         }
-//         if (a.sequence > b.sequence) {
-//             return 1
-//         }
-//     })
-
-//     board.lanes.forEach((lane) => {
-//         lane.cards.sort((a, b) => {
-//             if (a.sequence < b.sequence) {
-//                 return -1
-//             }
-//             if (a.sequence > b.sequence) {
-//                 return 1
-//             }
-//         })
-//     })
-// }
