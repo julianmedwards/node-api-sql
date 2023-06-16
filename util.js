@@ -1,6 +1,6 @@
 'use strict'
 
-const {Op} = require('sequelize')
+const { Op } = require('sequelize')
 
 module.exports = {
     // Updates sequence of tables starting at given value.
@@ -34,7 +34,7 @@ module.exports = {
             const instances = await model.findAll({
                 where: {
                     [parentColumn]: parentId,
-                    sequence: {[Op.gt]: startSequence},
+                    sequence: { [Op.gt]: startSequence },
                 },
                 order: [['sequence', 'ASC']],
             })
@@ -69,7 +69,7 @@ module.exports = {
     ) {
         return new Promise(async (resolve, reject) => {
             const currentInstance = await model.findOne({
-                where: {id: currentId},
+                where: { id: currentId },
             })
 
             const nextInstance = await model.findOne({
