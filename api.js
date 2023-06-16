@@ -1,7 +1,6 @@
 /**
  * Module Dependencies
  */
-const https = require('https')
 const fs = require('fs')
 const config = require('./config')
 const restify = require('restify')
@@ -10,10 +9,32 @@ require('restify').plugins
 /**
  * Initialize Server
  */
-const server = restify.createServer({
+
+const options = {
     name: config.name,
     version: config.version,
-})
+}
+
+if (process.env.NODE_ENV === 'production') {
+    if (Number(config.port) === 443) {
+        // Get Let's Encrypt SSL cert on Linux
+        options.key = fs.readFileSync(
+            `/etc/letsencrypt/live/${config.domain}/privkey.pem`
+        )
+        options.certificate = fs.readFileSync(
+            `/etc/letsencrypt/live/${config.domain}/fullchain.pem`
+        )
+        options.ca = fs.readFileSync(
+            `/etc/letsencrypt/live/${config.domain}/chain.pem`
+        )
+    } else {
+        throw new Error(
+            'Attempting to start production server on non-HTTPS port!'
+        )
+    }
+}
+
+const server = restify.createServer(options)
 
 /**
  * Middleware
@@ -43,36 +64,7 @@ require('./routes/index')(server, db)
 
 // drop and resync with { force: true },
 db.sequelize.sync().then(() => {
-    if (process.env.NODE_ENV === 'development') {
-        startUnencryptedServer()
-    } else {
-        startEncryptedServer()
-    }
-})
-
-function startUnencryptedServer() {
     server.listen(config.port, () => {
         console.log(`Server is listening on port ${config.port}`)
     })
-}
-
-function startEncryptedServer() {
-    if (Number(config.port) !== 443) {
-        throw new Error(
-            'Attempting to start encrypted server on port other than 443!'
-        )
-    }
-
-    // Get Let's Encrypt SSL cert on Linux
-    const options = {
-        key: fs.readFileSync(`/etc/certs/ssl/privkey.pem`),
-        cert: fs.readFileSync(`/etc/certs/ssl/fullchain.pem`),
-        ca: fs.readFileSync('/etc/certs/ssl/chain.pem'),
-    }
-
-    const httpsServer = https.createServer(options, server)
-
-    httpsServer.listen(config.port, () => {
-        console.log('HTTPS Server running on port 443')
-    })
-}
+})
