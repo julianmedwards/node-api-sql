@@ -58,7 +58,7 @@ function startUnencryptedServer() {
 }
 
 function startEncryptedServer() {
-    if (config.port !== 443) {
+    if (Number(config.port) !== 443) {
         throw new Error(
             'Attempting to start encrypted server on port other than 443!'
         )
