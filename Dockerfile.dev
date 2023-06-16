@@ -8,4 +8,4 @@ COPY package.json ./
 
 RUN npm install
 
-CMD ["nodemon", "api.js"]
+CMD ["npx", "nodemon", "api.js"]
