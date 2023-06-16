@@ -1,7 +1,7 @@
 module.exports = {
     name: 'API',
     env: process.env.NODE_ENV || 'development',
-    port: process.env.PORT || 5000,
+    port: process.env.API_PORT || 5000,
     db: {
         name: process.env.DATABASE_NAME || 'trello-boards',
         host: process.env.DATABASE_HOST || 'localhost',
