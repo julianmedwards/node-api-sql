@@ -2,6 +2,7 @@ module.exports = {
     name: 'API',
     env: process.env.NODE_ENV,
     port: process.env.API_PORT,
+    domain: process.env.API_DOMAIN_NAME,
     db: {
         name: process.env.DATABASE_NAME,
         host: process.env.DATABASE_HOST,
