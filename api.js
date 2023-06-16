@@ -1,10 +1,10 @@
 /**
  * Module Dependencies
  */
-const config = require('./config')
-const restify = require('restify')
 const https = require('https')
 const fs = require('fs')
+const config = require('./config')
+const restify = require('restify')
 require('restify').plugins
 
 /**
@@ -39,7 +39,6 @@ server.use(restify.plugins.queryParser({ mapParams: true }))
  * Sync DB, Require Routes, Start Server
  */
 const db = require('./db.js')
-const { error } = require('console')
 require('./routes/index')(server, db)
 
 // drop and resync with { force: true },
@@ -66,12 +65,9 @@ function startEncryptedServer() {
 
     // Get Let's Encrypt SSL cert on Linux
     const options = {
-        key: fs.readFileSync(
-            `/etc/letsencrypt/live/${config.domain}/privkey.pem`
-        ),
-        cert: fs.readFileSync(
-            `/etc/letsencrypt/live/${config.domain}/fullchain.pem`
-        ),
+        key: fs.readFileSync(`/etc/certs/ssl/privkey.pem`),
+        cert: fs.readFileSync(`/etc/certs/ssl/fullchain.pem`),
+        ca: fs.readFileSync('/etc/certs/ssl/chain.pem'),
     }
 
     const httpsServer = https.createServer(options, server)

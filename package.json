@@ -3,10 +3,6 @@
     "version": "1.0.0",
     "description": "",
     "main": "api.js",
-    "scripts": {
-        "start-prod": "node api.js",
-        "start-dev": "nodemon api.js"
-    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/julianmedwards/trello-api-sql.git"
